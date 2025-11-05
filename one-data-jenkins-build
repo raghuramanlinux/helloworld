@@ -1,0 +1,37 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "jenkins-docker-demo"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'git@github.com:raghuramanlinux/helloworld.git'
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                sh 'docker build -t $IMAGE_NAME .'
+            }
+        }
+
+        stage('Run Container') {
+            steps {
+                sh 'docker rm -f $IMAGE_NAME || true'
+                sh 'docker run -d -p 3000:3000 --name $IMAGE_NAME $IMAGE_NAME'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Build, Test, and Deploy Successful!'
+        }
+        failure {
+            echo '❌ Build or Test Failed!'
+        }
+    }
+}
