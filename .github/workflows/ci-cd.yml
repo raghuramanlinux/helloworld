@@ -50,19 +50,12 @@ jobs:
             ls -la k8s
 
             echo "=== Building Docker image ==="
-            docker build -t $REGISTRY/$IMAGE_NAME:latest .
-
-
-            echo "=== Pushing image to local registry ==="
-            docker push $REGISTRY/$IMAGE_NAME:latest
 
             eval $(minikube docker-env)
+            docker build -t $REGISTRY/$IMAGE_NAME:latest .
             minikube image load $REGISTRY/$IMAGE_NAME:latest
 
             kubectl apply -f k8s/deployment.yaml
             kubectl apply -f k8s/service.yaml
-
-            echo "=== Waiting for rollout ==="
-            kubectl rollout status deployment/flask-app
 
             echo "=== Deployment complete ==="
