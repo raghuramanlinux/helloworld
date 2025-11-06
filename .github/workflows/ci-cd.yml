@@ -55,13 +55,6 @@ jobs:
             echo "=== Pushing image to local registry ==="
             docker push $REGISTRY/$IMAGE_NAME:latest
 
-            echo "=== Creating Kubernetes secret ==="
-            kubectl create secret generic flask-secrets \
-              --from-literal=api-key=${{ secrets.API_KEY }} \
-              --dry-run=client -o yaml | kubectl apply -f -
-
-            echo "=== Deploying to Minikube ==="
-            export KUBECONFIG=~/.kube/config
             kubectl apply -f k8s/deployment.yaml
             kubectl apply -f k8s/service.yaml
 
