@@ -6,7 +6,6 @@ on:
   workflow_dispatch:
 
 env:
-  APP_ENV: production
   IMAGE_NAME: flask-k8s
   REGISTRY: localhost:5000
 
@@ -44,8 +43,10 @@ jobs:
             set -e
             cd ~/task-4
 
+            pwd
+
             echo "=== Building Docker image ==="
-            docker build -t $REGISTRY/$IMAGE_NAME:latest --build-arg APP_ENV=$APP_ENV .
+            docker build -t $REGISTRY/$IMAGE_NAME:latest ~/task-4/Dockerfile
 
             echo "=== Pushing to local registry ==="
             docker push $REGISTRY/$IMAGE_NAME:latest
