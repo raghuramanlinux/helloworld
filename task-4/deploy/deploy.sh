@@ -3,11 +3,11 @@ set -euo pipefail
 
 # Simple helper to deploy this repo to a local kind or minikube cluster.
 # Assumptions:
-# - Docker is available and the image build context is ./5/app by default
+# - Docker is available and the image build context is ./task-5/app by default
 # - kubectl is installed and points to the target cluster (kind/minikube)
 # - If DOCKERHUB_USERNAME and DOCKERHUB_TOKEN are provided, the script will push to Docker Hub.
 
-IMAGE_CONTEXT=${1:-./5/app}
+IMAGE_CONTEXT=${1:-./task-5/app}
 IMAGE_NAME=${2:-$(basename "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" )}
 TAG=${3:-latest}
 
