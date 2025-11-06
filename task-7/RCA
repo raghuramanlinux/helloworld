@@ -1,0 +1,28 @@
+Issue:
+
+Random 500 Internal Server Errors seen during testing.
+Logs showed “Simulated failure” message sometimes.
+
+Root Cause:
+
+The app had a random failure code using Math.random() for testing.
+This caused ~30% of requests to fail randomly.
+
+ Fix:
+
+Removed the random failure line.
+
+Added try/catch for proper error handling.
+
+ Result:
+
+After the fix, no more random 500 errors.
+App responding normally.
+
+ Next Steps:
+
+Add logging and monitoring.
+
+Add simple unit tests.
+
+Validate code through CI/CD before deployment.
