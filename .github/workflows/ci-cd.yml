@@ -46,7 +46,7 @@ jobs:
             pwd
 
             echo "=== Building Docker image ==="
-            docker build -t $REGISTRY/$IMAGE_NAME:latest ~/task-4/Dockerfile
+            docker build -t $REGISTRY/$IMAGE_NAME:latest .
 
             echo "=== Pushing to local registry ==="
             docker push $REGISTRY/$IMAGE_NAME:latest
