@@ -22,15 +22,15 @@ jobs:
           echo "${{ secrets.EC2_SSH_KEY }}" > ec2_key.pem
           chmod 600 ec2_key.pem
 
-      # 🔄 COPY ONLY THE task-4 FOLDER
+      # ✅ Copy the entire folder (not just contents)
       - name: Copy project files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "task-4/*"
-          target: "~/task-4"
+          source: "task-4"       # 👈 copy the folder itself
+          target: "~"            # 👈 will result in ~/task-4 on EC2
 
       - name: Build and Deploy to Minikube
         uses: appleboy/ssh-action@v0.1.10
@@ -43,12 +43,16 @@ jobs:
             set -e
             cd ~/task-4
 
+            echo "=== Checking project structure ==="
             pwd
+            ls -la
+            echo "=== Checking k8s directory ==="
+            ls -la k8s
 
             echo "=== Building Docker image ==="
             docker build -t $REGISTRY/$IMAGE_NAME:latest .
 
-            echo "=== Pushing to local registry ==="
+            echo "=== Pushing image to local registry ==="
             docker push $REGISTRY/$IMAGE_NAME:latest
 
             echo "=== Creating Kubernetes secret ==="
@@ -63,3 +67,5 @@ jobs:
 
             echo "=== Waiting for rollout ==="
             kubectl rollout status deployment/flask-app
+
+            echo "=== Deployment complete ==="
