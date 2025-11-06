@@ -1,0 +1,25 @@
+docker build -t flask-kube-demo:latest .\ndocker run -p 5000:5000 flask-kube-demo
+minikube start
+eval $(minikube docker-env)
+docker build -t flask-kube-demo:latest .
+docker images | grep flask-kube-demo
+minikube image load flask-kube-demo:latest
+minikube addons enable ingress
+
+
+
+kubectl config get-contexts
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+minikube service flask-kube-service --url
+kubectl apply -f ingress.yaml
+
+kubectl describe ingress flask-kube-ingress
+
+vi /etc/hosts
+
+127.0.0.1 flask.local
+
+Now open http://flask.local
+
+You’ll see the same “Hello from Kubernetes with Minikube!” page via NGINX Ingress.
