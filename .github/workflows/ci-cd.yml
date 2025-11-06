@@ -1,4 +1,4 @@
-name: CI-CD (Build -> Push/Load -> Deploy to kind)
+name: CI-CD (Build -> Push/Load -> Deploy to minikube)
 
 on:
   push:
@@ -58,19 +58,19 @@ jobs:
           IMAGE=$(jq -r '.image' <<< "$GITHUB_OUTPUT" || echo "${{ env.IMAGE_NAME }}:${{ github.sha }}")
           docker push "$IMAGE"
 
-      - name: Create kind cluster and load image (when not pushing to DockerHub)
+      - name: Create minikube cluster and load image (when not pushing to DockerHub)
         if: secrets.DOCKERHUB_USERNAME == '' || secrets.DOCKERHUB_TOKEN == ''
-        uses: engineerd/setup-kind@v0.7.0
+        uses: engineerd/setup-minikube@v0.7.0
         with:
           version: v0.18.0
 
-      - name: Load image into kind and configure kubectl
+      - name: Load image into minikube and configure kubectl
         if: secrets.DOCKERHUB_USERNAME == '' || secrets.DOCKERHUB_TOKEN == ''
         env:
           IMAGE: ${{ env.IMAGE_NAME }}:${{ github.sha }}
         run: |
-          # load image into kind cluster created by setup-kind
-          kind load docker-image "$IMAGE" --name kind || true
+          # load image into minikube cluster created by setup-minikube
+          minikube load image "$IMAGE" --name minikube || true
           # install kubectl
           curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x ./kubectl && sudo mv ./kubectl /usr/local/bin/kubectl
           kubectl version --client
