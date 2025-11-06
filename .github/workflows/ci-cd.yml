@@ -48,14 +48,17 @@ jobs:
             ls -la
             echo "=== Checking k8s directory ==="
             ls -la k8s
-
-            echo "=== Building Docker image ==="
-
+            
+            echo "=== Using Minikube's Docker daemon ==="
             eval $(minikube docker-env)
-            docker build -t $REGISTRY/$IMAGE_NAME:latest .
-            minikube image load $REGISTRY/$IMAGE_NAME:latest
-
+            
+            echo "=== Building image inside Minikube ==="
+            docker build -t $IMAGE_NAME:latest .
+            
+            echo "=== Deploying to Minikube ==="
             kubectl apply -f k8s/deployment.yaml
             kubectl apply -f k8s/service.yaml
+            kubectl rollout status deployment/flask-app
+
 
             echo "=== Deployment complete ==="
