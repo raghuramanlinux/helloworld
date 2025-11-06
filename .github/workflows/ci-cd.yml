@@ -52,8 +52,12 @@ jobs:
             echo "=== Building Docker image ==="
             docker build -t $REGISTRY/$IMAGE_NAME:latest .
 
+
             echo "=== Pushing image to local registry ==="
             docker push $REGISTRY/$IMAGE_NAME:latest
+
+            eval $(minikube docker-env)
+            minikube load image $REGISTRY/$IMAGE_NAME:latest
 
             kubectl apply -f k8s/deployment.yaml
             kubectl apply -f k8s/service.yaml
