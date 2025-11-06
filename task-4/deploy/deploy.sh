@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Simple helper to deploy this repo to a local minikube or minikube cluster.
+# Simple helper to deploy this repo to a local kind or minikube cluster.
 # Assumptions:
 # - Docker is available and the image build context is ./task-5/app by default
-# - kubectl is installed and points to the target cluster (minikube)
+# - kubectl is installed and points to the target cluster (kind/minikube)
 # - If DOCKERHUB_USERNAME and DOCKERHUB_TOKEN are provided, the script will push to Docker Hub.
 
 IMAGE_CONTEXT=${1:-./task-5/app}
@@ -21,13 +21,13 @@ if [ -n "${DOCKERHUB_USERNAME:-}" ] && [ -n "${DOCKERHUB_TOKEN:-}" ]; then
   echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
   docker push "$FULL_IMAGE"
 else
-  echo "No Docker Hub credentials found — attempting to load into minikube (if available)"
-  if command -v minikube >/dev/null 2>&1; then
-    minikube load image "$FULL_IMAGE" || true
+  echo "No Docker Hub credentials found — attempting to load into kind (if available)"
+  if command -v kind >/dev/null 2>&1; then
+    kind load docker-image "$FULL_IMAGE" || true
   elif command -v minikube >/dev/null 2>&1; then
     minikube image load "$FULL_IMAGE" || true
   else
-    echo "Neither minikube nor minikube found — cannot load image into local cluster. Exiting."
+    echo "Neither kind nor minikube found — cannot load image into local cluster. Exiting."
     exit 1
   fi
 fi
