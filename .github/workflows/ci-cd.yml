@@ -1,97 +1,64 @@
-name: CI-CD (Build -> Push/Load -> Deploy to minikube)
+name: CI/CD - Local Registry + Minikube on EC2
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  APP_ENV: production
+  IMAGE_NAME: flask-k8s
+  REGISTRY: localhost:5000
 
 jobs:
-  build-test-deploy:
-    name: Build, Test, Publish and Deploy
+  deploy:
     runs-on: ubuntu-latest
-
-    env:
-      # Adjust this path to the app you want to build. Default: ./task-5/app
-      IMAGE_CONTEXT: ./task-5/app
-      IMAGE_NAME: ${{ github.repository }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python (for running tests)
-        uses: actions/setup-python@v4
+      - name: Set up SSH key
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" > ec2_key.pem
+          chmod 600 ec2_key.pem
+
+      # 🔄 COPY ONLY THE task-4 FOLDER
+      - name: Copy project files to EC2
+        uses: appleboy/scp-action@v0.1.7
         with:
-          python-version: '3.11'
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "task-4/*"
+          target: "~/task-4"
 
-      - name: Install test deps (if present)
-        run: |
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Run tests (if pytest present)
-        run: |
-          if command -v pytest > /dev/null 2>&1; then pytest -q; else echo "pytest not found — skipping tests"; fi
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Log in to DockerHub (if secrets provided)
-        if: secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != ''
-        uses: docker/login-action@v2
+      - name: Build and Deploy to Minikube
+        uses: appleboy/ssh-action@v0.1.10
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: APP_ENV,IMAGE_NAME,REGISTRY
+          script: |
+            set -e
+            cd ~/task-4
 
-      - name: Build Docker image
-        id: build_image
-        run: |
-          TAG=${{ github.sha }}
-          IMAGE=${{ env.IMAGE_NAME }}:${TAG}
-          echo "Building image $IMAGE from context ${IMAGE_CONTEXT}"
-          docker build -t "$IMAGE" "${IMAGE_CONTEXT}"
-          echo "image=$IMAGE" >> $GITHUB_OUTPUT
+            echo "=== Building Docker image ==="
+            docker build -t $REGISTRY/$IMAGE_NAME:latest --build-arg APP_ENV=$APP_ENV .
 
-      - name: Push image to DockerHub (optional)
-        if: secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != ''
-        run: |
-          IMAGE=$(jq -r '.image' <<< "$GITHUB_OUTPUT" || echo "${{ env.IMAGE_NAME }}:${{ github.sha }}")
-          docker push "$IMAGE"
+            echo "=== Pushing to local registry ==="
+            docker push $REGISTRY/$IMAGE_NAME:latest
 
-      - name: Create minikube cluster and load image (when not pushing to DockerHub)
-        if: secrets.DOCKERHUB_USERNAME == '' || secrets.DOCKERHUB_TOKEN == ''
-        uses: engineerd/setup-minikube@v0.7.0
-        with:
-          version: v0.18.0
+            echo "=== Creating Kubernetes secret ==="
+            kubectl create secret generic flask-secrets \
+              --from-literal=api-key=${{ secrets.API_KEY }} \
+              --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Load image into minikube and configure kubectl
-        if: secrets.DOCKERHUB_USERNAME == '' || secrets.DOCKERHUB_TOKEN == ''
-        env:
-          IMAGE: ${{ env.IMAGE_NAME }}:${{ github.sha }}
-        run: |
-          # load image into minikube cluster created by setup-minikube
-          minikube load image "$IMAGE" --name minikube || true
-          # install kubectl
-          curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x ./kubectl && sudo mv ./kubectl /usr/local/bin/kubectl
-          kubectl version --client
+            echo "=== Deploying to Minikube ==="
+            export KUBECONFIG=~/.kube/config
+            kubectl apply -f k8s/deployment.yaml
+            kubectl apply -f k8s/service.yaml
 
-      - name: Deploy to cluster (kubectl apply)
-        env:
-          IMAGE: ${{ env.IMAGE_NAME }}:${{ github.sha }}
-        run: |
-          # replace image placeholder in k8s manifests if present
-          if [ -d ./k8s ]; then
-            echo "Applying manifests from ./k8s"
-            # do a safe sed replace for image placeholders like REPLACE_IMAGE
-            for f in $(ls k8s/*.yaml 2>/dev/null || true); do
-              sed "s|REPLACE_IMAGE|${IMAGE}|g" "$f" | kubectl apply -f -
-            done
-          else
-            echo "No ./k8s directory found — nothing to apply"
-            exit 0
-          fi
-
-      - name: Show deployments
-        if: always()
-        run: |
-          kubectl get all --all-namespaces || true
+            echo "=== Waiting for rollout ==="
+            kubectl rollout status deployment/flask-app
