@@ -2,20 +2,6 @@
 
 set -e
 
-#echo "🔧 Checking Docker installation..."
-#if ! command -v docker &> /dev/null
-#then
-#    echo "Docker not found. Please install Docker first."
-#    exit 1
-#fi
-
-#echo "🔧 Checking Docker Compose installation..."
-#if ! command -v docker compose &> /dev/null
-#then
-#    echo "Docker Compose not found. Please install Docker Compose."
-#    exit 1
-#fi
-
 echo "🐳 Pulling required base images..."
 docker pull redis:7
 docker pull nginx:latest
