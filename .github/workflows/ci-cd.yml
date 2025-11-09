@@ -1,64 +1,64 @@
-name: CI/CD - Local Registry + Minikube on EC2
+# name: CI/CD - Local Registry + Minikube on EC2
 
-on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
+# on:
+#   push:
+#     branches: [ "main" ]
+#   workflow_dispatch:
 
-env:
-  IMAGE_NAME: 'flask-k8s'
-  REGISTRY: 'localhost:5001'
+# env:
+#   IMAGE_NAME: 'flask-k8s'
+#   REGISTRY: 'localhost:5001'
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
 
-      - name: Set up SSH key
-        run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" > ec2_key.pem
-          chmod 600 ec2_key.pem
+#       - name: Set up SSH key
+#         run: |
+#           echo "${{ secrets.EC2_SSH_KEY }}" > ec2_key.pem
+#           chmod 600 ec2_key.pem
 
-      # ✅ Copy the entire folder (not just contents)
-      - name: Copy project files to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "task-4"       # 👈 copy the folder itself
-          target: "~"            # 👈 will result in ~/task-4 on EC2
+#       # ✅ Copy the entire folder (not just contents)
+#       - name: Copy project files to EC2
+#         uses: appleboy/scp-action@v0.1.7
+#         with:
+#           host: ${{ secrets.EC2_HOST }}
+#           username: ${{ secrets.EC2_USER }}
+#           key: ${{ secrets.EC2_SSH_KEY }}
+#           source: "task-4"       # 👈 copy the folder itself
+#           target: "~"            # 👈 will result in ~/task-4 on EC2
 
-      - name: Build and Deploy to Minikube
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          envs: APP_ENV,IMAGE_NAME,REGISTRY
-          script: |
-            set -e
-            cd ~/task-4
+#       - name: Build and Deploy to Minikube
+#         uses: appleboy/ssh-action@v0.1.10
+#         with:
+#           host: ${{ secrets.EC2_HOST }}
+#           username: ${{ secrets.EC2_USER }}
+#           key: ${{ secrets.EC2_SSH_KEY }}
+#           envs: APP_ENV,IMAGE_NAME,REGISTRY
+#           script: |
+#             set -e
+#             cd ~/task-4
 
-            echo "=== Checking project structure ==="
-            pwd
-            ls -la
-            echo "=== Checking k8s directory ==="
-            ls -la k8s
+#             echo "=== Checking project structure ==="
+#             pwd
+#             ls -la
+#             echo "=== Checking k8s directory ==="
+#             ls -la k8s
             
-            echo "=== Using Minikube's Docker daemon ==="
-            eval $(minikube docker-env)
+#             echo "=== Using Minikube's Docker daemon ==="
+#             eval $(minikube docker-env)
             
-            echo "=== Building image inside Minikube ==="
-            docker build -t $IMAGE_NAME:latest .
+#             echo "=== Building image inside Minikube ==="
+#             docker build -t $IMAGE_NAME:latest .
             
-            echo "=== Deploying to Minikube ==="
-            kubectl apply -f k8s/deployment.yaml
-            kubectl apply -f k8s/service.yaml
-            kubectl rollout status deployment/flask-app
+#             echo "=== Deploying to Minikube ==="
+#             kubectl apply -f k8s/deployment.yaml
+#             kubectl apply -f k8s/service.yaml
+#             kubectl rollout status deployment/flask-app
 
 
-            echo "=== Deployment complete ==="
+#             echo "=== Deployment complete ==="
